@@ -1,0 +1,226 @@
+---
+title: "Best prices"
+author: "Center of statistic"
+date: "30/11/2020"
+output: html_document
+---
+
+```{r echo=FALSE, results='hide', message=FALSE}
+# Запустим необходимые библиотеки
+library(MASS)
+library(dplyr)
+library(car)
+library(ggplot2)
+library(gridExtra)
+options(digits=5)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Анализ стоимости недвижимости 
+
+Здравствуйте, уважаемый заказчик. Мы получили столь любезно предоставленные вами данные по стоимости жилья в различных районах Бостона. Мы провели статистический анализ и построили модель, которая поможет вам подобрать наиболее перспективные для продажи дома. 
+
+В подготовленном документе будут содержаться не только схемы, но также и наиболее значимые части кода. Если вы их и не поймёте, то в любом случае будете знать, что мы и правда что-то тут считали. 
+
+```{r include=FALSE, echo=FALSE}
+df <- Boston
+df <- as.data.frame(sapply(df, scale))
+model_Boston_scaled <- lm(medv ~ crim + zn + indus + chas + nox + rm + age + dis + rad + tax + ptratio + black, data = df)
+model_Boston_scaled_as_df <- data.frame(fortify(model_Boston_scaled))
+```
+
+## Первоначальная модель
+В этой модели содержатся все факторы, которые потенциально могут оказать влияние на стоимость квартиры.  
+```{r echo=FALSE}
+summary(model_Boston_scaled)
+```
+
+
+Эта чудо-модель учитывает вообще всё, но у неё в то же время имеются некоторые проблемы. 
+
+```{r message=FALSE, echo=FALSE}
+gg_model_Boston <- ggplot(model_Boston_scaled_as_df, aes(x = .fitted, y = .stdresid))+
+  geom_point()+
+  geom_hline(yintercept = 0) +
+  geom_smooth(method = "lm") +
+  geom_hline(yintercept = 2, color = "red") +
+  geom_hline(yintercept = -2, color = "red")
+
+gg_model_Boston
+```
+
+Остатки формируют своеобразный паттерн, напоминающий упавший на бок полумесяц. Также имеется ряд наблюдений, остатки которых формируют выраженную линию. Эти наблюдения представляют дополнительный интерес. График остатков указывает на удовлетворительный результат работы модели, имеющей явные недостатки. Имеется большое количество наблюдений за пределами 2 стандартных отклонений, обнаруживаются скрытые паттерны остатков. 
+
+```{r echo=FALSE}
+ggplot(data = model_Boston_scaled_as_df, aes(x = 1:nrow(model_Boston_scaled_as_df), y = .cooksd)) + 
+  geom_bar(stat = 'identity')+
+  geom_hline(yintercept = 2, color = "red")
+```
+
+График расстояний Кука представляет удовлетворительный результат. На нём не обнаруживается причин для беспокойства. 
+
+```{r echo=FALSE}
+qqPlot(model_Boston_scaled_as_df$.stdresid)
+
+gg_model_Boston_boxplot <- ggplot(model_Boston_scaled_as_df, aes(x = .fitted, y = .stdresid))+
+  geom_boxplot()+
+  geom_hline(yintercept = 0)
+```
+Квантильный график показывает на очень серьёзные отклонения от ожидаемых значений в правой части графика. Это указывает на возможное серьёзное отклонение от нормального распределения остатков. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+grid.arrange(gg_model_Boston + aes(x = crim),
+             gg_model_Boston + aes(x = zn),
+             gg_model_Boston + aes(x = indus),
+             gg_model_Boston + aes(x = nox),
+             gg_model_Boston + aes(x = rm),
+             gg_model_Boston + aes(x = age),
+             gg_model_Boston + aes(x = dis),
+             gg_model_Boston + aes(x = tax),
+             gg_model_Boston + aes(x = ptratio),
+             gg_model_Boston + aes(x = black),
+             nrow = 5)
+
+grid.arrange(gg_model_Boston_boxplot + aes(x = rad),
+             gg_model_Boston_boxplot + aes(x = chas))
+
+```
+
+Анализ отдельных предикторов, включённых в модель, указывает на явные проблемы с предикторами. Предикторы zn, indus, tax, ptratio имеют очень выраженные палочные паттерны из определённых наблюдений. Судя по всему это ряд взаимосвязанных наблюдений, которые оказываются существенное влияние на предсказание модели. Эти же наблюдения формируют серию убывающих по значению наблюдений на графике остатков. Я предполагаю, что эти же наблюдения являются выбросами на графиках с боксплотами. 
+
+
+#### Взаимосвязь предикторов друг с другом. 
+```{r echo=FALSE}
+vif(model_Boston_scaled )
+```
+Также проведя тест на мультиколлинеарность мы можем обнаружить, что некоторые предикторы имеют чётко выраженные корреляции друг с другом. Так как наличие коллинеарных предикторов может оказать существенное влияние на модель, рекомендуется отказаться от использования текущей модели. В ней имеется большое количество коллинеарных предикторов. 
+
+
+## Улучшение модели
+
+Модель можно улучшить для более точного предсказания. 
+
+Первым делом уберём предиктор indus, его p-value > 0.05. Он не оказывает существенного влияния на предсказываемое значение переменной medv. 
+
+
+```{r}
+mod_1 <- update(model_Boston_scaled , .~. - indus)
+```
+
+
+После этого уберём предикторы, значение VIF которых больше 2. 
+```{r}
+vif(mod_1)
+```
+
+Начнём с предиктора tax.
+
+```{r}
+mod_2 <- update(mod_1, .~. - tax)
+vif(mod_2)
+```
+
+Удалим предиктор nox.
+
+```{r}
+mod_3 <- update(mod_2, .~. - nox)
+vif(mod_3)
+```
+
+Удалим предиктор dis
+
+```{r}
+mod_4 <- update(mod_3, .~. - dis)
+vif(mod_4)
+```
+
+Последний предиктор со значение VIF > 2 это предиктор rad. Удалим его из модели
+
+```{r}
+mod_5 <- update(mod_4, .~. - rad)
+vif(mod_5)
+```
+
+
+### Отбор предикторов по значимости
+
+Мы избавились от предикторов с мультиколлинеарностью. Теперь произведём отбор предикторов по значимости.
+
+```{r}
+drop1(mod_5, test = "F")
+mod_6 <- update(mod_5, .~. - zn)
+mod_6 <- update(mod_6, .~. - zn)
+```
+
+Предиктор zn оказался незначимым и мы удаляем его из модели. 
+
+```{r echo=FALSE}
+drop1(mod_6, test = 'F')
+
+```
+Все остальные предикторы оказались значимыми. Они важны для модели. 
+
+### Диагностика новой модели
+
+Проведём диагностику, полученной модели
+
+
+```{r echo=FALSE}
+mod_6_diag <- data.frame(fortify(mod_6))
+gg_resid_2 <- ggplot(data = mod_6_diag, aes(x = .fitted, y = .stdresid)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0) +
+  geom_smooth(method = "lm") +
+  geom_hline(yintercept = 2, color = "red") +
+  geom_hline(yintercept = -2, color = "red")
+gg_resid_2
+```
+
+Вам может показаться, что этот график остатков похож на предыдущи. Это так. 
+
+```{r echo=FALSE}
+ggplot(mod_6_diag, aes(x = 1:nrow(mod_6_diag), y = .cooksd)) + 
+  geom_bar(stat = "identity") + 
+  geom_hline(yintercept = 2, color = "red")
+qqPlot(mod_6_diag$.stdresid)
+```
+
+Графики Кука и квантильный график тоже не претерпели существенных изменений, но модель явно стала лучше.
+
+
+## Предсказания модели
+
+
+```{r echo=FALSE}
+summary(mod_6)
+```
+Наша итоговая модель говорит, что наибольшее влияние на стоимость квартиры оказывается переменная rm. Остальные переменные оказывают меньшее значение. Поэтому предсказание мы будем строить по этому предиктору. 
+
+```{r echo=FALSE}
+Data <- data.frame(
+  rm = seq(min(Boston$rm), max(Boston$rm), length.out = 100),
+  crim = mean(Boston$crim),
+  chas = mean(Boston$chas),
+  age = mean(Boston$age),
+  ptratio = mean(Boston$ptratio),
+  black = mean(Boston$black)
+)
+
+Predicted <- predict(mod_6, newdata = Data,  interval = 'confidence')
+Data <- data.frame(Data, Predicted)
+Pred_gr <- ggplot(Data, aes(x = rm, y = fit)) +
+  geom_ribbon(alpha = 0.2, aes(ymin = lwr, ymax = upr)) +
+  geom_line() + 
+  ggtitle("Предсказания по множественной модели")
+Pred_gr
+```
+
+
+## Окончательные рекомендации
+
+Как вы можете видеть с увеличением количества комнат возрастает цена. Повышение среднего возраста жильцов, высокий уровень преступности же ведут к снижению стоимости жилья.
+
+Рекомендуем вам инвестировать в большие квартиры в молодых районах, с низким уровнем преступности и рекой рядом. 
+
