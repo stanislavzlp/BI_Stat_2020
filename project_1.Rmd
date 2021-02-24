@@ -1,0 +1,241 @@
+---
+title: "Project_1"
+output: github_document
+---
+
+
+```{r echo=FALSE, results='hide', message=FALSE}
+# Запустим необходимые библиотеки
+library(dplyr)
+library(tidyr)
+library(dlookr)
+library(outliers)
+library(ggplot2)
+library(ggpubr)
+library(knitr)
+library(markdown)
+options(digits=5)
+```
+## Насколько стара мидия?
+
+В ходе работы научной группы были получены несколько файлов с результатами измерений мидий. В представленной работе будет проведена предварительная оценка, коррекция и статистическая обработка данных по размерам и возрасту мидий, которые были получены в ходе летнего полевого сезона. 
+
+В конечный документ будут интегрированы наиболее значимые участки кода.
+
+### Рабочие данные
+Ваша рабочая директория должна содержать набор файлов для последующего анализа, будьте добры ввести её вручную в переменную 'My_way'.
+
+```{r }
+My_way <- "/home/stas/R/BioinformInstitut_data/project1/Data/"
+```
+
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = My_way)
+```
+
+
+После этого воспользуйте функцией 'importData', чтобы собрать все данные в единую таблицу
+```{r echo=FALSE}
+importData <- function(My_way){
+  list_of_csv <- list.files(My_way, pattern = '*.csv') 
+  merged_data <- lapply(list_of_csv, read.csv, header = TRUE)
+  combined_data <- do.call(rbind, merged_data)
+}
+```
+
+```{r }
+df <- importData(My_way)
+```
+
+### Предварительная обработка данных (EDA)
+
+Теперь в нашем распоряжении имеется сводная таблица со всеми данными о мидиях, которые были собраны в полевой сезон. Перед тем как приступить к статистическому анализу данных проведём разведовательный анализ и предварительную обработку данных. Это крайне необходимо, так как наши данные страдают от нескольких проблем.
+
+1) Название переменной 'Sex..1...male..2...female..3...uvenil' никуда не годится
+2) Переменные 'Sex..1...male..2...female..3...uvenil', 'Rings' и 'Length' относятся к типу 'character', что затрудняет их дальнейший анализ
+
+Все эти проблемы видны при первом же взгляде на данные, вот:
+```{r echo=FALSE}
+str(df)
+```
+Приведём данные в подобающий вид.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df <- df %>%
+  rename(
+    Sex = Sex..1...male..2...female..3...uvenil.
+  )
+df$Sex <- factor(df$Sex, levels = c(1, 2, 3), labels = c('Male', 'Female', 'Uvenil'))
+
+df$Rings <- as.numeric(df$Rings)
+df$Length <- as.numeric(df$Length)
+
+str(df)
+```
+
+```{r echo=FALSE}
+na_tab <- colSums(is.na(df))
+```
+Теперь данные содержат правильные названия переменных, а также указаны правильные типы для переменных. Однако проверка данных на наличие 'NA" значений, показывает, что в наших данных имеется `r sum(na_tab)` пропущенных значений. 
+
+Так как количество пропущенных значений не очень велико, удаление из анализа наблюдений с отсутствующими значениями не повлечёт за собой каких-либо существенных воздействий на последующий анализ.
+В качестве возможной альтернативы данному методу можно использовать замену пропущенных значений на средее, медиану или моду. Удаление же их из последующего анализа является наименее трудоёмким и максимально простым решением, поэтому мы воспользуемся именно им. Также переименуем наши данные для последующей работы в 'Mussel_data' 
+
+```{r echo=FALSE}
+Mussel_data <- na.omit(df)
+```
+Визуализируем наши данные на наличие выбросов, предварительно разделив их по переменной 'Sex'
+```{r echo=FALSE}
+
+Height_in_Sex <- ggboxplot(Mussel_data, x = 'Sex' , y = 'Height',
+                           color = 'Sex', title = 'Height', ylab = FALSE, xlab = FALSE) + 
+                              theme(legend.position = "none") +
+                              rotate_x_text(angle = 45) +
+                                theme(plot.title = element_text(hjust = 0.5))
+
+Rings_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Rings',
+                          color = 'Sex', title = 'Rings', ylab = FALSE, xlab = FALSE) + 
+                            theme(legend.position = "none") +
+                            rotate_x_text(angle = 45) + 
+                            theme(plot.title = element_text(hjust = 0.5))
+
+Length_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Length',
+                           color = 'Sex', title = 'Length', ylab = FALSE, xlab = FALSE) + 
+                            theme(legend.position = "none") +
+                            rotate_x_text(angle = 45) +
+                            theme(plot.title = element_text(hjust = 0.5))
+
+Diameter_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Diameter',
+                             color = 'Sex', title = "Diameter", ylab = FALSE, xlab = FALSE) + 
+                              theme(legend.position = "none") +
+                              rotate_x_text(angle = 45) +
+                               theme(plot.title = element_text(hjust = 0.5))
+
+Whole_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Whole_weight',
+                                 color = 'Sex', title = 'Whole weight', ylab = FALSE, xlab = FALSE) + 
+                                    theme(legend.position = "none") +
+                                     rotate_x_text(angle = 45) +
+                                      theme(plot.title = element_text(hjust = 0.5))
+
+Shucked_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Shucked_weight',
+                                   color = 'Sex', title = 'Shucked weight', ylab = FALSE, xlab = FALSE) + 
+                                    theme(legend.position = "none") +
+                                    rotate_x_text(angle = 45) +
+                                    theme(plot.title = element_text(hjust = 0.5))
+
+Viscera_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Viscera_weight',
+                                   color = 'Sex', title = 'Viscera weight', ylab = FALSE, xlab = FALSE) + 
+                                      theme(legend.position = "none") +
+                                      rotate_x_text(angle = 45) +
+                                      theme(plot.title = element_text(hjust = 0.5))
+
+Shell_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Shell_weight',
+                                 color = 'Sex', title = 'Shell weight', ylab = FALSE, xlab = FALSE) + 
+                                  theme(legend.position = "none") +
+                                  rotate_x_text(angle = 45) +
+                                  theme(plot.title = element_text(hjust = 0.5))
+
+
+Half_boxplotes <-  ggarrange(Height_in_Sex, Rings_in_Sex, Length_in_Sex, Diameter_in_Sex)
+
+Weight_boxplotes <- ggarrange(Whole_weight_in_Sex, Shucked_weight_in_Sex, Viscera_weight_in_Sex, Shell_weight_in_Sex)
+
+Half_boxplotes 
+Weight_boxplotes
+```
+
+По результатам визуализации можно обнаружить, что в переменной 'Height' содержится 2 очень серьёзных выброса. После проверки их с использованием теста Граббса, подтвердившего выбросную природу этих наблюдений, удалим их наших данных. 
+```{r echo=FALSE}
+grubbs.test(Mussel_data$Height)
+Mussel_data <-  subset(Mussel_data, Height != max(Mussel_data$Height))
+grubbs.test(Mussel_data$Height)
+Mussel_data <-  subset(Mussel_data, Height != max(Mussel_data$Height))
+```
+Теперь переменная выглядит значительно лучше.
+```{r echo=FALSE}
+Height_in_Sex <- ggboxplot(Mussel_data, x = 'Sex' , y = 'Height',
+                           color = 'Sex', title = 'Height', ylab = FALSE) + 
+                              theme(legend.position = "none") +
+                              rotate_x_text(angle = 45) +
+                                theme(plot.title = element_text(hjust = 0.5))
+Height_in_Sex
+```
+
+Теперь проведём предварительную оценку взаимосвязей между переменными. 
+
+```{r echo=FALSE}
+plot_correlate(Mussel_data)
+```
+
+### Результаты EDA
+
+По результатам предварительной оценки можно сделать предположение о том, что большая часть переменных имеет очень сильную положительную корреляцию между друг другом.
+Исходя из данных предварительного анализа можно сделать следующие предположения:  
+1) Имеется сильная корреляция между показателями длины и диаметра   
+2) Имеется сильная корреляции между диаметром (иными словами размером) мидии и её суммарным весом  
+3) Ювенильные особи отличаются по размеру от взрослых представителей  
+
+
+### Основной анализ
+
+Рассчитаем среднее значение и стандартное отклонение переменной Length для моллюсков разного пола.
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+mean_sd_for_Sex <- Mussel_data %>% 
+  group_by(Sex) %>%
+  summarise(Mean = mean(Length), Standart_deviation = sd(Length))
+
+```
+```{r echo=FALSE}
+kable(mean_sd_for_Sex)
+```
+
+Определим процент моллюсков, у которых значение переменной Height не превышает значения 0.165.
+
+```{r echo=FALSE}
+percent_0.165 <-  round(sum(Mussel_data$Height <= 0.165) / sum(Mussel_data$Height >= 0), 4) 
+```
+
+Вычисленное значение равняется `r percent_0.165` от общего количества наблюдейний. При переводе на проценты получается, что у 75.82% моллюсков значение переменной Height не превышает 0.165
+
+
+```{r echo=FALSE}
+number_of_92 <- round((sum(Mussel_data$Length > 0) * 0.92), 0)
+count_92_percentage <- Mussel_data %>% arrange(Length)
+Eithn_data <- count_92_percentage[-c(1:number_of_92),]
+```
+
+Значение Length, которое больше, чем у 92% всех наблюдений равняется: `r min(Eithn_data$Length)`
+
+
+### Создадим новую переменную Length_z_scores
+В переменную поместим значения переменной Length после стандартизации. Небольшой кусочек таблицы демострирует новую добавленную переменную.
+
+```{r echo=FALSE}
+Mussel_data <- Mussel_data %>% mutate(Lenght_z_scores = scale(Length))
+kable(Mussel_data[c(1:5),])
+```
+
+### Проведёи некоторые статистические тесты
+
+Сравним между собой диаметр моллюсков с числом колец 5 и 15.
+```{r echo=FALSE}
+diam_5 <- Mussel_data$Diameter[Mussel_data$Rings == 5]
+diam_15 <- Mussel_data$Diameter[Mussel_data$Rings == 15]
+testo <- t.test(diam_15, diam_5, alternative = 'greater')
+testo
+```
+После проведения двувыборочного T-теста удалось установить следующее. Диаметр мидий, у которых имеется 15 колец, больше, чем диаметр мидий, у которых 5 колец. (t = `r testo$statistic`, df = 196, p-value < 2e-16)
+
+
+### Взаимосвязь между переменными Diametr и Whole_weight
+
+Ещё при первоначальном анализе была обнаружена сильная корреляция между двумя этими величинами. Для того, чтобы подтвердить её наличие, проведём статистические тесты. 
+```{r echo=FALSE}
+cor_test_Diam_Weight <- cor.test(Mussel_data$Diameter, Mussel_data$Whole_weight)
+cor_test_Diam_Weight
+```
+
+По результатам корреляционного анализа можно сделать вывод о том, что существует сильная корреляция между переменными Diametr и Whole_weight  (t = `r cor_test_Diam_Weight$statistic`, df = `r cor_test_Diam_Weight$parameter` , p-palue < 2e-16)
+
+
+### Конец
