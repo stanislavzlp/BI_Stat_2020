@@ -7,7 +7,7 @@ output: html_document
 
 ```
 
-```{r cars}
+```{r cars, echo=FALSE,  results='hide', message=FALSE}
 library(readxl)
 library(impute)
 library(ggplot2)
@@ -101,7 +101,7 @@ qqPlot(mouse_model)
  
 ### Пост-хок тест
 Проведём Пост хок тест Тьюки для определения групп, между которыми отличается уровень экспрессии белка BDNF_N
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE}
 mouse_post_hoc <- glht(mouse_model, linfct = mcp(class = "Tukey"))
 
 summary(mouse_post_hoc)
@@ -147,7 +147,7 @@ ggplot(plot_data, aes( component, `Proportion Explained`)) + geom_bar(stat = "id
 Первая компонента объясняет 25%, вторая компонента - 17%, третья 11%, четвертая - 7%, пятая - 5%, шестая - 4%
 
 ### Трехмерный график трех первых компонент
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE, message=FALSE}
 df_scores <- data.frame(data_for_PCA,
                         scores(mouse_pca, display = "sites", choices = c(1:5), scaling = 1))
 fig <- plot_ly(df_scores, x =~PC1, y = ~PC2, z = ~PC3, color = ~class, size = 0.1 )
