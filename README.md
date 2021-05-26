@@ -70,18 +70,17 @@ Project code and report stored in [project_4_survival]()
 
 ## Logistic regression <a name="logreg"></a>
 
+
 Logistic regression project for data from this [sourse](https://stats.idre.ucla.edu/stat/data/binary.csv).
 
 Data information: A researcher is interested in how variables, such as GRE (Graduate Record Exam scores),
-GPA (grade point average) and prestige of the undergraduate institution, effect admission into graduate school. 
-The response variable, admit/don’t admit, is a binary variable.
+GPA (grade point average) and prestige of the undergraduate institution, affect admission into graduate school. 
+The response variable, admit/don’t admit, is binary.
  
 In this project I performed:
  1. EDA  
- 2. Make logistic regression model  
+ 2. Make a logistic regression model  
  3. Checked conditions for the applicability of the model  
- 4. Made and visualized predictions using logistic regression model
+ 4. Made and visualized predictions using a logistic regression model
  
 Project code and report stored in [project_5_amdission]()
-
-
