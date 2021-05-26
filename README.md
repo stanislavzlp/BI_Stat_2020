@@ -1,5 +1,5 @@
-# Projects on statistic in R Bioinformatic Institute 2020/21
-
+# Statistics in R &ndash; Projects
+## R Bioinformatic Institute 2020/21
 
 ### Content
 
