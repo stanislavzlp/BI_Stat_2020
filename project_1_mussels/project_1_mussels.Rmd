@@ -1,0 +1,234 @@
+---
+title: "Project_1_mussel"
+author: "Me"
+date: "24/10/2020"
+output: html_document
+---
+
+```{r echo=FALSE, results='hide', message=FALSE}
+# required libraries
+library(dplyr)
+library(tidyr)
+library(dlookr)
+library(outliers)
+library(ggplot2)
+library(ggpubr)
+library(knitr)
+library(markdown)
+options(digits=5)
+```
+## How old is mussel?
+
+In this work presented statistical analysis of size and age of the mussels. 
+
+### Work data
+Save work directory to 'My_way'.
+
+```{r}
+My_way <- "/home/stas/git/BI_Stat_2020/project_1_mussels//data/"
+```
+
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+opts_knit$set(root.dir = My_way)
+```
+
+
+Collect all data to one table using import Data function.
+```{r echo=FALSE}
+importData <- function(My_way){
+  list_of_csv <- list.files(My_way, pattern = '*.csv') 
+  merged_data <- lapply(list_of_csv, read.csv, header = TRUE)
+  combined_data <- do.call(rbind, merged_data)
+}
+```
+
+```{r }
+df <- importData(My_way)
+```
+
+### EDA
+
+1) Rename 'Sex..1...male..2...female..3...uvenil' 
+2) Change type 'Sex..1...male..2...female..3...uvenil', 'Rings' и 'Length' 
+
+```{r echo=FALSE}
+str(df)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df <- df %>%
+  rename(
+    Sex = Sex..1...male..2...female..3...uvenil.
+  )
+df$Sex <- factor(df$Sex, levels = c(1, 2, 3), labels = c('Male', 'Female', 'Uvenil'))
+
+df$Rings <- as.numeric(df$Rings)
+df$Length <- as.numeric(df$Length)
+
+str(df)
+```
+
+```{r echo=FALSE}
+na_tab <- colSums(is.na(df))
+```
+
+Our data contains `r sum(na_tab)` of NA. 
+
+I deleted all samples with NA because there are not many of them. It is the most simple way, but not the best. 
+
+```{r echo=FALSE}
+Mussel_data <- na.omit(df)
+```
+Check outliers for each sexes.
+
+
+```{r echo=FALSE}
+
+Height_in_Sex <- ggboxplot(Mussel_data, x = 'Sex' , y = 'Height',
+                           color = 'Sex', title = 'Height', ylab = FALSE, xlab = FALSE) + 
+                              theme(legend.position = "none") +
+                              rotate_x_text(angle = 45) +
+                                theme(plot.title = element_text(hjust = 0.5))
+
+Rings_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Rings',
+                          color = 'Sex', title = 'Rings', ylab = FALSE, xlab = FALSE) + 
+                            theme(legend.position = "none") +
+                            rotate_x_text(angle = 45) + 
+                            theme(plot.title = element_text(hjust = 0.5))
+
+Length_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Length',
+                           color = 'Sex', title = 'Length', ylab = FALSE, xlab = FALSE) + 
+                            theme(legend.position = "none") +
+                            rotate_x_text(angle = 45) +
+                            theme(plot.title = element_text(hjust = 0.5))
+
+Diameter_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Diameter',
+                             color = 'Sex', title = "Diameter", ylab = FALSE, xlab = FALSE) + 
+                              theme(legend.position = "none") +
+                              rotate_x_text(angle = 45) +
+                               theme(plot.title = element_text(hjust = 0.5))
+
+Whole_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Whole_weight',
+                                 color = 'Sex', title = 'Whole weight', ylab = FALSE, xlab = FALSE) + 
+                                    theme(legend.position = "none") +
+                                     rotate_x_text(angle = 45) +
+                                      theme(plot.title = element_text(hjust = 0.5))
+
+Shucked_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Shucked_weight',
+                                   color = 'Sex', title = 'Shucked weight', ylab = FALSE, xlab = FALSE) + 
+                                    theme(legend.position = "none") +
+                                    rotate_x_text(angle = 45) +
+                                    theme(plot.title = element_text(hjust = 0.5))
+
+Viscera_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Viscera_weight',
+                                   color = 'Sex', title = 'Viscera weight', ylab = FALSE, xlab = FALSE) + 
+                                      theme(legend.position = "none") +
+                                      rotate_x_text(angle = 45) +
+                                      theme(plot.title = element_text(hjust = 0.5))
+
+Shell_weight_in_Sex <- ggboxplot(Mussel_data, x = 'Sex', y = 'Shell_weight',
+                                 color = 'Sex', title = 'Shell weight', ylab = FALSE, xlab = FALSE) + 
+                                  theme(legend.position = "none") +
+                                  rotate_x_text(angle = 45) +
+                                  theme(plot.title = element_text(hjust = 0.5))
+
+
+Half_boxplotes <-  ggarrange(Height_in_Sex, Rings_in_Sex, Length_in_Sex, Diameter_in_Sex)
+
+Weight_boxplotes <- ggarrange(Whole_weight_in_Sex, Shucked_weight_in_Sex, Viscera_weight_in_Sex, Shell_weight_in_Sex)
+
+Half_boxplotes 
+Weight_boxplotes
+```
+
+'Height' has two outliers also confirmed by Grubbs's test. They will be deleted from analysis.
+
+```{r echo=FALSE}
+grubbs.test(Mussel_data$Height)
+Mussel_data <-  subset(Mussel_data, Height != max(Mussel_data$Height))
+grubbs.test(Mussel_data$Height)
+Mussel_data <-  subset(Mussel_data, Height != max(Mussel_data$Height))
+```
+
+```{r echo=FALSE}
+Height_in_Sex <- ggboxplot(Mussel_data, x = 'Sex' , y = 'Height',
+                           color = 'Sex', title = 'Height', ylab = FALSE) + 
+                              theme(legend.position = "none") +
+                              rotate_x_text(angle = 45) +
+                                theme(plot.title = element_text(hjust = 0.5))
+Height_in_Sex
+```
+
+Check interconnection between variables.
+
+```{r echo=FALSE}
+plot_correlate(Mussel_data)
+```
+
+### EDA results
+
+1) Strong correlation between length and diameter 
+2) Strong correlation between weight and diameter 
+3) Juveniles are smaller than adults
+
+
+### Main
+
+Mean and sd for mussels from different sex
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+mean_sd_for_Sex <- Mussel_data %>% 
+  group_by(Sex) %>%
+  summarise(Mean = mean(Length), Standart_deviation = sd(Length))
+
+```
+```{r echo=FALSE}
+kable(mean_sd_for_Sex)
+```
+
+Calculate percent of mussels with Height less than 0.165
+
+```{r echo=FALSE}
+percent_0.165 <-  round(sum(Mussel_data$Height <= 0.165) / sum(Mussel_data$Height >= 0), 4) 
+```
+
+75.82% of mussels have Height less than 0.165
+
+
+```{r echo=FALSE}
+number_of_92 <- round((sum(Mussel_data$Length > 0) * 0.92), 0)
+count_92_percentage <- Mussel_data %>% arrange(Length)
+Eithn_data <- count_92_percentage[-c(1:number_of_92),]
+```
+
+Length value which greater than length of 92% of other mussels: `r min(Eithn_data$Length)`
+
+
+### Create Length_z_scores
+
+```{r echo=FALSE}
+Mussel_data <- Mussel_data %>% mutate(Lenght_z_scores = scale(Length))
+kable(Mussel_data[c(1:5),])
+```
+
+### Statistic tests
+
+Compare mussels with 5 and 15 rings
+```{r echo=FALSE}
+diam_5 <- Mussel_data$Diameter[Mussel_data$Rings == 5]
+diam_15 <- Mussel_data$Diameter[Mussel_data$Rings == 15]
+testo <- t.test(diam_15, diam_5, alternative = 'greater')
+testo
+```
+
+Mussels with 15 rings have greater diameter than mussels with 5 rings (t = `r testo$statistic`, df = 196, p-value < 2e-16)
+
+
+### Diametr and Whole_weight
+
+```{r echo=FALSE}
+cor_test_Diam_Weight <- cor.test(Mussel_data$Diameter, Mussel_data$Whole_weight)
+cor_test_Diam_Weight
+```
+
+Diameter and Whole_weight are correlated  (t = `r cor_test_Diam_Weight$statistic`, df = `r cor_test_Diam_Weight$parameter` , p-palue < 2e-16)
