@@ -18,7 +18,7 @@ length, diameter, width, shell length, etc.
 All data separated into several csv files. In the first place, I wrote a similar function with one purpose - to unite all separated data to one dataset. 
 I performed exploratory data analysis (EDA) and found some features and potential correlations between variables. Also, I found some descriptive statistics and compared different groups of mussels with each other, etc. More detailed information about project aims is presented here (link).
 
-Project code and report stored in [project_1_mussel]() 
+Project code and report stored in [project_1_mussel](https://github.com/stanislavzlp/BI_Stat_2020/tree/master_m/project_1_mussels) 
 
 
 ## Linear regression analysis <a name="lr"></a>
@@ -38,7 +38,7 @@ Main aims of the project:
 
 After a diagnosis of the model, I removed some predictors and formed the best model for house price predictions.
 
-Project code and report stored in [project_2_Boston]()
+Project code and report stored in [project_2_Boston](https://github.com/stanislavzlp/BI_Stat_2020/tree/master_m/project_2_Boston)
 
 
 ## Principal components analysis (PCA) <a name="pca"></a>
@@ -54,7 +54,7 @@ I analyzed the difference in the production of BDNF_N in different classes of mi
 Test linear model for a prediction production level of ERBB4_N protein demonstrated the failure of this analysis due to multicollinearity between predictions. After linear 
 model diagnosis I performed PCA. 
 
-Project code and report stored in [project_3_mouse]()
+Project code and report stored in [project_3_mouse](https://github.com/stanislavzlp/BI_Stat_2020/tree/master_m/project_3_mouse)
 
 ## Survival analysis <a name="sa"></a>
 
@@ -66,7 +66,7 @@ Main aims of the project:
 3. Determine groups with the best survival rate
 4. Identify the factors that affect the risk and assess the risk ratio
 
-Project code and report stored in [project_4_survival]()
+Project code and report stored in [project_4_survival](https://github.com/stanislavzlp/BI_Stat_2020/tree/master_m/project_4_survival)
 
 ## Logistic regression <a name="logreg"></a>
 
@@ -83,4 +83,4 @@ In this project I performed:
  3. Checked conditions for the applicability of the model  
  4. Made and visualized predictions using a logistic regression model
  
-Project code and report stored in [project_5_admission]()
+Project code and report stored in [project_5_admission](https://github.com/stanislavzlp/BI_Stat_2020/tree/master_m/project_5_admission)
