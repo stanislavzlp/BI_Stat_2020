@@ -1,0 +1,129 @@
+---
+title: "Ovarian Cancer Survival"
+author: "Me"
+output:
+  html_document:
+    df_print: paged
+  md_document:
+    variant: markdown_github
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(survival)
+library(ggplot2)
+library(quantmod)
+library(survminer)
+library(ranger)
+library(dplyr)
+library(ggfortify)
+library(coin)
+library(tidyverse)
+```
+### Data information
+This data set contain information about survival in two treatments groups for ovarian cancer. \
+Let's rename colnames for convenience.
+```{r echo=FALSE, results='hide'}
+data = ovarian
+data = data %>% rename(Time = futime, Cens_stat = fustat, Resid_disease = resid.ds, Treatment = rx, ECOG_status = ecog.ps, Age = age)
+```
+#### Format
+**Time:** 	survival or censoring time \
+**Cens_stat:** 	censoring status \
+**Age:** 	in years \
+**Resid_disease:** 	residual disease present (1 = no, 2 = yes) \
+**Treatment:** 	treatment group \
+**ECOG_status:** 	ECOG performance status (**1** = Restricted in physically strenuous activity, **2** = Ambulatory and capable of all selfcare but unable to carry out any work activities). \
+
+This work includes survival analysis for two groups: Kaplan–Meier statistic, groups survival difference and estimation of factors influence. 
+
+### Exploratory data analysis
+
+```{r echo = FALSE, comment = ''}
+colSums(is.na(data))
+```
+There are no missing values (NA) in the data.
+
+##### Age and Time distribution and correlation \
+```{r echo = FALSE, message=FALSE}
+age_histo = ggplot(data, aes(x = Age))+
+  geom_histogram(binwidth = 5)
+time_histo = ggplot(data, aes(x = Time))+
+  geom_histogram(binwidth = 100)
+age_time_corr = ggplot(data, aes(x = Age, y = Time)) +
+  geom_point()+
+  geom_smooth(method = lm)
+
+age_time_full = ggarrange(age_histo, time_histo, age_time_corr,
+                          ncol = 2, nrow = 2)
+age_time_full
+```
+\
+Data contains 26 observations. 
+
+### Kaplan–Meier statistics
+```{r, echo=FALSE}
+km <- with(data, Surv(Time, Cens_stat))
+
+km_fit <- survfit(Surv(Time, Cens_stat) ~ 1, data = data)
+
+ovar_data <- mutate(data, Age = ifelse((Age < 55), "LT55", "OV55"),
+              Resid_disease = factor(Resid_disease, labels=c('RD -', 'RD +')),
+              Treatment = factor(Treatment,labels=c("Tr1","Tr2")),
+              ECOG_status = factor(ECOG_status, labels = c('ECOG 1', 'ECOG 2')),
+              Age = factor(Age))
+
+km_Age_fit <- survfit(Surv(Time, Cens_stat) ~ Age, data=ovar_data)
+age_km <- autoplot(km_Age_fit)
+km_Treatment_fit <- survfit(Surv(Time, Cens_stat) ~ Treatment, data=ovar_data)
+Treatment_km <- autoplot(km_Treatment_fit)
+km_ECOG_fit <- survfit(Surv(Time, Cens_stat) ~ ECOG_status, data=ovar_data)
+ECOG_km <- autoplot(km_ECOG_fit)
+km_resid_fit <- survfit(Surv(Time, Cens_stat) ~ Resid_disease, data=ovar_data)
+resid_km <- autoplot(km_resid_fit)
+
+ggarrange(age_km, Treatment_km, ECOG_km, resid_km,
+          nrow = 2, ncol = 2)
+```
+\
+From the results of these Kaplan-Meier graphics, you can see a preliminary difference in the survival of the groups.\
+Patients over 55 years of age die much more often.\
+Treatment with Tr2 is more effective.\
+Patients in poor condition die more often.\
+Patients with the onset of the disease also die more often.\
+
+### Log-rank test 
+
+```{r}
+logrank_test(Surv(Time, Cens_stat) ~ Resid_disease, data = ovar_data)
+logrank_test(Surv(Time, Cens_stat) ~ Age, data = ovar_data)
+logrank_test(Surv(Time, Cens_stat) ~ Treatment, data = ovar_data)
+logrank_test(Surv(Time, Cens_stat) ~ ECOG_status, data = ovar_data)
+```
+According to the test results, Age (p-value = 0.02985) and the Presence of residual disease (p-value = 0.05444) have a significant effect on patient mortality. 
+
+#### Analysis of risk factors (Cox model)
+```{r echo=FALSE, warning=FALSE}
+aa_fit <- aareg(Surv(Time, Cens_stat) ~ Age + Resid_disease + Treatment + ECOG_status, data = ovar_data)
+autoplot(aa_fit)
+
+```
+\
+The graphs show the level of influence of various factors on patient survival. So age over 55 and the presence of a current disease lead to an increase in mortality. At the same time, treatment with Tr2 promotes a longer life for patients.\
+
+#### Hazard Ratio\
+
+```{r echo=FALSE}
+fit.coxph <- coxph(Surv(Time, Cens_stat) ~ Age + Resid_disease + Treatment + ECOG_status, data = ovar_data)
+ggforest(fit.coxph, data = ovar_data)
+```
+\
+The results of this test are partially consistent with the data of the Cox model. Age over 55 (p-value = 0.033) is a factor that reduces patient survival. Treatment with Tr2 (p-value = 0.047) is more successful and contributes to patient survival. \
+The reliability of the influence of residual disease present is ambiguous. It is possible that more detailed studies in the future will be able to give an unambiguous answer. Some tests consider this feature to be significantly influencing, others do not.\
+
+#### Results
+Age decreases the patient's chance of survival.\
+Treatment for Tr2 is more promising in terms of patient survival. 
+
+
