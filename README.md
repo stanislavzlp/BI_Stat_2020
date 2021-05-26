@@ -83,4 +83,4 @@ In this project I performed:
  3. Checked conditions for the applicability of the model  
  4. Made and visualized predictions using a logistic regression model
  
-Project code and report stored in [project_5_amdission]()
+Project code and report stored in [project_5_admission]()
